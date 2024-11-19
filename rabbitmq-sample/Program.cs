@@ -1,4 +1,5 @@
 using RabbitMQ.Client;
+using rabbitmq_sample;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<IMessageQueueService, MessageQueueService>();
+builder.Services.AddSingleton<RabbitMqConnector>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -17,6 +21,13 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+
+
+using (var scope = app.Services.CreateScope())
+{
+    var queueService = scope.ServiceProvider.GetRequiredService<IMessageQueueService>();
+    queueService.PublishMessage("mesajkuyrugu", "Uygulama baþlatýldý ve mesaj gönderildi.");
 }
 
 app.UseHttpsRedirection();
@@ -28,14 +39,3 @@ app.MapControllers();
 app.Run();
 
 
-ConnectionFactory factory = new ConnectionFactory();
-//factory.Uri = new Uri("amqp://hkhjerrt:hcqiavAqll6-co4abXnSqUBh_hHifz-Z@hornet.rmq.cloudamqp.com/hkhjerrt");
-factory.HostName = "localhost";
-
-using (IConnection connection = factory.CreateConnection())
-using (IModel channel = connection.CreateModel())
-{
-    channel.QueueDeclare("mesajkuyrugu", false, false, true);
-    byte[] bytemessage = Encoding.UTF8.GetBytes("Kuyruða mesaj gönderme denemesi");
-    channel.BasicPublish(exchange: "", routingKey: "mesajkuyrugu", body: bytemessage);
-}
